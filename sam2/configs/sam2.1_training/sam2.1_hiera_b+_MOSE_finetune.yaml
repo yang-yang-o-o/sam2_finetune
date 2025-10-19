@@ -13,11 +13,17 @@ scratch:
 
 dataset:
   # PATHS to Dataset
-  img_folder: null # PATH to MOSE JPEGImages folder
-  gt_folder: null  # PATH to MOSE Annotations folder
+  img_folder: data/MOSE/train/JPEGImages # PATH to MOSE JPEGImages folder
+  gt_folder: data/MOSE/train/Annotations  # PATH to MOSE Annotations folder
   file_list_txt: training/assets/MOSE_sample_train_list.txt # Optional PATH to filelist containing a subset of videos to be used for training
   multiplier: 2
-
+  # MOSE dataset download links
+    # gdown https://drive.google.com/uc\?id\=1BwGlVBdGTvcRJ5Jezxn5Ucfyu32G2jkL
+    # gdown https://drive.google.com/uc\?id\=1MmhRXKXFnEwzaoeE0b_e_RQjvVLHOc7I
+    # gdown https://drive.google.com/uc\?id\=1qdkU6yZ0ZxZ0FzOXuRf9wRi5xNxLQoX4
+    # gdown https://drive.google.com/uc\?id\=1qSul3OYaCRhSLmx7rhJxM3nVcCmyK9Q3
+    # gdown https://drive.google.com/uc\?id\=16Ns7a_frLaCo2ug18UIUkzVYFQqyd4N0
+    # gdown https://drive.google.com/uc\?id\=1yFoacQ0i3J5q6LmnTVVNTTgGocuPB_hR
 # Video transforms
 vos:
   train_transforms:
