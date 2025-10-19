@@ -369,42 +369,50 @@ def main():
     parser.add_argument(
         "--sam2_cfg",
         type=str,
-        default="configs/sam2.1/sam2.1_hiera_b+.yaml",
+        required=True,
+        # default="configs/sam2.1/sam2.1_hiera_b+.yaml",
         help="SAM 2 model configuration file",
     )
     parser.add_argument(
         "--sam2_checkpoint",
         type=str,
-        default="./checkpoints/sam2.1_hiera_base_plus.pt",
+        # default="./checkpoints/sam2.1_hiera_base_plus.pt",
+        required=False,
+        default=None,
         help="path to the SAM 2 model checkpoint",
     )
     parser.add_argument(
         "--base_video_dir",
         type=str,
-        required=True,
+        required=False,
+        default=None,
         help="directory containing videos (as JPEG files) to run VOS prediction on",
     )
     parser.add_argument(
         "--input_mask_dir",
         type=str,
-        required=True,
+        required=False,
+        default=None,
         help="directory containing input masks (as PNG files) of each video",
     )
     parser.add_argument(
         "--video_list_file",
         type=str,
+        required=False,
         default=None,
         help="text file containing the list of video names to run VOS prediction on",
     )
     parser.add_argument(
         "--output_mask_dir",
         type=str,
-        required=True,
+        required=False,
+        default=None,
         help="directory to save the output masks (as PNG files)",
     )
     parser.add_argument(
         "--score_thresh",
         type=float,
+        required=False,
         default=0.0,
         help="threshold for the output mask logits (default: 0.0)",
     )
@@ -443,11 +451,11 @@ def main():
 
     # if we use per-object PNG files, they could possibly overlap in inputs and outputs
     hydra_overrides_extra = [
-        "++model.non_overlap_masks=" + ("false" if args.per_obj_png_file else "true")
+        "++trainer.model.non_overlap_masks=" + ("false" if args.per_obj_png_file else "true")
     ]
-    predictor = build_sam2_video_predictor(
+    predictor, cfg = build_sam2_video_predictor(
         config_file=args.sam2_cfg,
-        ckpt_path=args.sam2_checkpoint,
+        # ckpt_path=args.sam2_checkpoint,
         apply_postprocessing=args.apply_postprocessing,
         hydra_overrides_extra=hydra_overrides_extra,
         vos_optimized=args.use_vos_optimized_video_predictor,
@@ -461,14 +469,14 @@ def main():
         )
     # if a video list file is provided, read the video names from the file
     # (otherwise, we use all subdirectories in base_video_dir)
-    if args.video_list_file is not None:
-        with open(args.video_list_file, "r") as f:
+    if cfg.inference.video_list_file is not None:
+        with open(cfg.inference.video_list_file, "r") as f:
             video_names = [v.strip() for v in f.readlines()]
     else:
         video_names = [
             p
-            for p in os.listdir(args.base_video_dir)
-            if os.path.isdir(os.path.join(args.base_video_dir, p))
+            for p in os.listdir(cfg.inference.base_video_dir)
+            if os.path.isdir(os.path.join(cfg.inference.base_video_dir, p))
         ]
     print(f"running VOS prediction on {len(video_names)} videos:\n{video_names}")
 
@@ -477,9 +485,9 @@ def main():
         if not args.track_object_appearing_later_in_video:
             vos_inference(
                 predictor=predictor,
-                base_video_dir=args.base_video_dir,
-                input_mask_dir=args.input_mask_dir,
-                output_mask_dir=args.output_mask_dir,
+                base_video_dir=cfg.inference.base_video_dir,
+                input_mask_dir=cfg.inference.input_mask_dir,
+                output_mask_dir=cfg.inference.output_mask_dir,
                 video_name=video_name,
                 score_thresh=args.score_thresh,
                 use_all_masks=args.use_all_masks,
@@ -488,9 +496,9 @@ def main():
         else:
             vos_separate_inference_per_object(
                 predictor=predictor,
-                base_video_dir=args.base_video_dir,
-                input_mask_dir=args.input_mask_dir,
-                output_mask_dir=args.output_mask_dir,
+                base_video_dir=cfg.inference.base_video_dir,
+                input_mask_dir=cfg.inference.input_mask_dir,
+                output_mask_dir=cfg.inference.output_mask_dir,
                 video_name=video_name,
                 score_thresh=args.score_thresh,
                 use_all_masks=args.use_all_masks,
@@ -499,7 +507,7 @@ def main():
 
     print(
         f"completed VOS prediction on {len(video_names)} videos -- "
-        f"output masks saved to {args.output_mask_dir}"
+        f"output masks saved to {cfg.inference.output_mask_dir}"
     )
 
 

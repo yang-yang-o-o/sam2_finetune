@@ -25,6 +25,33 @@ from training.utils.train_utils import makedir, register_omegaconf_resolvers
 os.environ["HYDRA_FULL_ERROR"] = "1"
 
 
+def ddp_proc_run(cfg):
+    """DDP process"""
+
+    local_rank = int(os.environ["LOCAL_RANK"])
+    node_rank = int(os.environ.get("NODE_RANK", "0"))
+
+    global_rank = node_rank * cfg.launcher.gpus_per_node + local_rank
+
+    os.environ["RANK"] = str(global_rank)
+
+    print("==== Distributed Env ====")
+    print(f"NODE_RANK    = {node_rank}")
+    print(f"LOCAL_RANK   = {os.environ['LOCAL_RANK']}")
+    print(f"RANK         = {os.environ['RANK']}")
+    print(f"WORLD_SIZE   = {os.environ['WORLD_SIZE']}")
+    print(f"MASTER_ADDR  = {os.environ['MASTER_ADDR']}")
+    print(f"MASTER_PORT  = {os.environ['MASTER_PORT']}")
+    print("=========================")
+
+    try:
+        register_omegaconf_resolvers()
+    except Exception as e:
+        logging.info(e)
+
+    trainer = instantiate(cfg.trainer, _recursive_=False)
+    trainer.run()
+
 def single_proc_run(local_rank, main_port, cfg, world_size):
     """Single GPU process"""
     os.environ["MASTER_ADDR"] = "localhost"
@@ -124,7 +151,7 @@ def main(args) -> None:
     cfg = compose(config_name=args.config)
     if cfg.launcher.experiment_log_dir is None:
         cfg.launcher.experiment_log_dir = os.path.join(
-            os.getcwd(), "sam2_logs", args.config
+            os.getcwd(), cfg.launcher.experiment_name, args.config
         )
     print("###################### Train App Config ####################")
     print(OmegaConf.to_yaml(cfg))
@@ -160,7 +187,7 @@ def main(args) -> None:
     submitit_conf.use_cluster = (
         args.use_cluster if args.use_cluster is not None else submitit_conf.use_cluster
     )
-    if submitit_conf.use_cluster:
+    if submitit_conf.use_cluster: # SLURM
         executor = submitit.AutoExecutor(folder=submitit_dir)
         submitit_conf.partition = (
             args.partition
@@ -232,8 +259,10 @@ def main(args) -> None:
         job = executor.submit(runner)
         print(f"Submitit Job ID: {job.job_id}")
         runner.setup_job_info(job.job_id, rank=0)
-    else:
-        cfg.launcher.num_nodes = 1
+    elif "RANK" in os.environ: # train_dist_ddp
+        ddp_proc_run(cfg=cfg)
+    else: # train_dist & train_dist_debug
+        cfg.launcher.num_nodes = 1 # default setting
         main_port = random.randint(
             submitit_conf.port_range[0], submitit_conf.port_range[1]
         )

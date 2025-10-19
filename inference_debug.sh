@@ -1,14 +1,16 @@
 export CUDA_VISIBLE_DEVICES=4
+export LD_LIBRARY_PATH=/opt/hpcx/ucx/lib:$LD_LIBRARY_PATH
 
-     
-# CFG=$1
-# filename=$(basename "$CFG")
-# dirname=$(dirname "$CFG")
-# yamlname="${filename%.*}"
+# bash inference_debug.sh sam2_logs_0803_node4/configs/efficienttam/efficienttam-s-1_sam2.1_hiera_b+_MOSE_finetune.yaml/config_resolved.yaml
+
+full_path=$1
+
+dir_path=$(dirname "$full_path")
+file_name=$(basename "$full_path")
+export MY_HYDRA_PATH="../$dir_path"
+
+echo "MY_HYDRA_PATH: $MY_HYDRA_PATH"
+echo "sam2_cfg     : $file_name"
+
 python -m debugpy --listen 0.0.0.0:5678 --wait-for-client tools/vos_inference.py \
-    --sam2_cfg //mnt/data/yangyang/code/tracking/sam2-main/sam2_logs/configs/sam2.1_training/sam2.1_hiera_b+_MOSE_finetune.yaml/config_resolved.yaml \
-    --sam2_checkpoint sam2_logs/configs/sam2.1_training/sam2.1_hiera_b+_MOSE_finetune/checkpoints/checkpoint.pt \
-    --base_video_dir data/MOSE/valid/JPEGImages \
-    --input_mask_dir data/MOSE/valid/Annotations \
-    --video_list_file data/MOSE/valid/1.txt \
-    --output_mask_dir ./outputs/mose_val_pred_pngs_2
+    --sam2_cfg $file_name
