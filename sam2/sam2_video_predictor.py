@@ -21,6 +21,25 @@ class SAM2VideoPredictor(SAM2Base):
 
     def __init__(
         self,
+        prob_to_use_pt_input_for_train=0.0,
+        prob_to_use_pt_input_for_eval=0.0,
+        prob_to_use_box_input_for_train=0.0,
+        prob_to_use_box_input_for_eval=0.0,
+        # if it is greater than 1, we interactive point sampling in the 1st frame and other randomly selected frames
+        num_frames_to_correct_for_train=1,  # default: only iteratively sample on first frame
+        num_frames_to_correct_for_eval=1,  # default: only iteratively sample on first frame
+        rand_frames_to_correct_for_train=False,
+        rand_frames_to_correct_for_eval=False,
+        prob_to_sample_from_gt_for_train=0.0,
+        num_init_cond_frames_for_train=1,  # default: only use the first frame as initial conditioning frame
+        num_init_cond_frames_for_eval=1,  # default: only use the first frame as initial conditioning frame
+        rand_init_cond_frames_for_train=True,  # default: random 1~num_init_cond_frames_for_train cond frames (to be constent w/ previous TA data loader)
+        rand_init_cond_frames_for_eval=False,
+        num_correction_pt_per_frame=7,
+        use_act_ckpt_iterative_pt_sampling=False,
+        forward_backbone_per_frame_for_eval=False,
+
+
         fill_hole_area=0,
         # whether to apply non-overlapping constraints on the output object masks
         non_overlap_masks=False,

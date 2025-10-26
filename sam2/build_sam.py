@@ -6,9 +6,9 @@
 
 import logging
 import os
-
 import torch
-from hydra import compose
+from hydra import compose, initialize
+from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
@@ -99,7 +99,7 @@ def build_sam2(
 
 def build_sam2_video_predictor(
     config_file,
-    ckpt_path=None,
+    # ckpt_path=None,
     device="cuda",
     mode="eval",
     hydra_overrides_extra=[],
@@ -108,7 +108,7 @@ def build_sam2_video_predictor(
     **kwargs,
 ):
     hydra_overrides = [
-        "++model._target_=sam2.sam2_video_predictor.SAM2VideoPredictor",
+        "++trainer.model._target_=sam2.sam2_video_predictor.SAM2VideoPredictor",
     ]
     if vos_optimized:
         hydra_overrides = [
@@ -131,14 +131,23 @@ def build_sam2_video_predictor(
     hydra_overrides.extend(hydra_overrides_extra)
 
     # Read config and init model
-    cfg = compose(config_name=config_file, overrides=hydra_overrides)
+    # 如果已经初始化过了，先清理
+    if GlobalHydra().is_initialized():
+        GlobalHydra.instance().clear()
+    config_path = os.environ.get("MY_HYDRA_PATH", ".")
+    with initialize(
+        config_path=config_path,
+        version_base=None,
+    ):
+        cfg = compose(config_name=config_file, overrides=hydra_overrides)
     OmegaConf.resolve(cfg)
-    model = instantiate(cfg.model, _recursive_=True)
-    _load_checkpoint(model, ckpt_path)
+    model = instantiate(cfg.trainer.model, _recursive_=True)
+    # _load_checkpoint(model, ckpt_path)
+    _load_checkpoint(model, cfg.inference.infer_checkpoint)
     model = model.to(device)
     if mode == "eval":
         model.eval()
-    return model
+    return model, cfg
 
 
 def _hf_download(model_id):
@@ -172,3 +181,4 @@ def _load_checkpoint(model, ckpt_path):
             logging.error(unexpected_keys)
             raise RuntimeError()
         logging.info("Loaded checkpoint sucessfully")
+        print(f"loaded checkpoint from: {ckpt_path}")
